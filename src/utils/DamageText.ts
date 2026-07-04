@@ -34,3 +34,33 @@ export function showDamageText(
     onComplete: () => text.destroy(),
   });
 }
+
+/** 拾取浮動文字（金幣綠字 / 藥水綠字）：上飄淡出 */
+export function showPickupText(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  label: string,
+  color: string,
+): void {
+  const text = scene.add
+    .text(x, y - 20, label, {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      fontStyle: 'bold',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3,
+    })
+    .setOrigin(0.5, 1)
+    .setDepth(5000);
+
+  scene.tweens.add({
+    targets: text,
+    y: y - 50,
+    alpha: 0,
+    duration: 600,
+    ease: 'Cubic.easeOut',
+    onComplete: () => text.destroy(),
+  });
+}

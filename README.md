@@ -60,3 +60,15 @@ src/
 - 史萊姆貼圖生成細節（橢圓主體 + 高光 + 黑眼）依「約 22×16 綠色果凍」描述程式實作，無外部素材。
 - 史萊姆僅與 obstacles collider（不與玩家/其他史萊姆），死亡期間 alive=false 不可被鎖定；脫離 aggro 範圍僅停止不回點。
 - 所有新增數值嚴格放 `src/data/MonsterStats.ts`；未修改 `tasks/**`、未改 `src/systems/*`、無 `any`、無新 runtime dep。
+
+## TASK-002 掉寶與拾取的規格未明處決策
+
+- `Player` 新增公開欄位 `gold: number = 0` 與 `addGold(value)` / `heal(amount)` 輔助方法：集中 emit `PLAYER_EVENT_STATS_CHANGED` 與 HP 計算；雖然 SPEC 描述使用 `player.gold +=`，但封裝可避免重複 emit 邏輯並與既有 `takeDamage`/`gainKillXp` 模式一致。
+- 掉落生成位置散落使用極座標等效的 `[-r,r]` 軸向偏移（非嚴格圓形均勻），簡單且符合「散落」直覺。
+- 拾取浮動文字新增 `showPickupText` 於 `utils/DamageText.ts`（重用既有跳字 tween 模式），金幣用 `#ffd766`、藥水用 `#33ff66`（綠）；即使藥水回血 0（HP 滿）仍顯示 `+0 HP` 並消耗。
+- `LootDrop` 不使用 Arcade Physics（純視覺 Sprite + 每幀手動距離檢查），符合「自動拾取」不需碰撞需求，也避免不必要 body。
+- 掉落物出現彈跳使用 `Back.easeOut` 小縮放+y 補間；拾取/消失使用上飄 alpha fade 200~280ms，無額外音效（與專案無音效慣例一致）。
+- `VillageScene` 的 `loots` 陣列於 `create()` 重置，並在 `updateLoots()` 使用 filter 同時清理無效與執行拾取；despawn 由 `LootDrop` 內部 `delayedCall` + tween destroy 負責，filter 自然移除。
+- 史萊姆 onKilled callback 內同時處理 XP（條件）與 `spawnLoot`（無條件），位置取死亡時 `slime.x/y`（閉包於執行時已初始化）。
+- HUD 金幣文字置於 XP bar 下方 y=90，與既有 bar 座標不重疊；使用與 XP/HP 相同事件驅動 refresh。
+- 所有常數置於新增 `src/data/LootStats.ts`，Boot 貼圖生成集中 `makeLoot()`；未碰 `src/systems/`、未改 tasks/、零 any、build 通過。

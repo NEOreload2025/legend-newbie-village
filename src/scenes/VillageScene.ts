@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
 import { GameState } from '../data/GameState';
 import { SLIME_CONST } from '../data/MonsterStats';
+import { LOOT_CONST } from '../data/LootStats';
 import { GAME_CONST } from '../data/ClassStats';
 import { Player } from '../entities/Player';
 import { Pet } from '../entities/Pet';
 import { TrainingDummy } from '../entities/TrainingDummy';
 import { Slime } from '../entities/Slime';
+import { LootDrop } from '../entities/LootDrop';
 import type { Attackable } from '../entities/Attackable';
 import { Hud } from '../ui/Hud';
+import { showPickupText } from '../utils/DamageText';
 import {
   DUMMY_TILES,
   MAP_COLS,
@@ -33,6 +36,8 @@ export class VillageScene extends Phaser.Scene {
   private pet: Pet | null = null;
   private dummies: TrainingDummy[] = [];
   private slimes: Slime[] = [];
+  /** 場上所有掉落物，命名必須為 loots（驗證腳本相依） */
+  private loots: LootDrop[] = [];
 
   constructor() {
     super(VillageScene.KEY);
@@ -41,6 +46,7 @@ export class VillageScene extends Phaser.Scene {
   create(): void {
     this.dummies = [];
     this.slimes = [];
+    this.loots = [];
     this.pet = null;
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -75,6 +81,7 @@ export class VillageScene extends Phaser.Scene {
     for (const slime of this.slimes) {
       slime.update(time);
     }
+    this.updateLoots();
   }
 
   /** 鋪設等角地面：草地 / 泥土十字路 / 訓練區 */
@@ -141,6 +148,8 @@ export class VillageScene extends Phaser.Scene {
       const slime = new Slime(this, x, groundY + 6, this.player, (source) => {
         // 玩家親自擊殺給 40 XP
         if (source === 'player') this.player.gainKillXp(SLIME_CONST.xpReward);
+        // 史萊姆死亡掉寶（金幣必掉 + 機率藥水），不論玩家或寵物擊殺
+        this.spawnLoot(slime.x, slime.y);
       });
       slime.setDepth(OBJECT_DEPTH_BASE + slime.y);
       this.slimes.push(slime);
@@ -183,5 +192,54 @@ export class VillageScene extends Phaser.Scene {
         this.player.setMoveTarget(pointer.worldX, pointer.worldY);
       }
     });
+  }
+
+  /** 生成掉落物：金幣（必）+ 藥水（機率），位置以死亡點為中心散落 */
+  private spawnLoot(baseX: number, baseY: number): void {
+    // 金幣：goldMin..goldMax 整數均勻
+    const goldValue =
+      Math.floor(Math.random() * (LOOT_CONST.goldMax - LOOT_CONST.goldMin + 1)) +
+      LOOT_CONST.goldMin;
+    const gold = new LootDrop(this, baseX, baseY, 'gold', goldValue);
+    this.loots.push(gold);
+
+    // 紅藥水
+    if (Math.random() < LOOT_CONST.potionDropChance) {
+      const potion = new LootDrop(this, baseX, baseY, 'potion');
+      this.loots.push(potion);
+    }
+  }
+
+  /** 每幀檢查玩家距離自動拾取（≤ pickupRange），並清理已消失者 */
+  private updateLoots(): void {
+    const p = this.player;
+    const rangeSq = LOOT_CONST.pickupRange * LOOT_CONST.pickupRange;
+
+    // 先過濾無效的
+    this.loots = this.loots.filter((loot) => loot.active && loot.scene);
+
+    this.loots = this.loots.filter((loot) => {
+      const dx = loot.x - p.x;
+      const dy = loot.y - p.y;
+      if (dx * dx + dy * dy <= rangeSq) {
+        this.pickupLoot(loot);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private pickupLoot(loot: LootDrop): void {
+    if (loot.lootType === 'gold' && typeof loot.value === 'number') {
+      const v = loot.value;
+      this.player.addGold(v);
+      // 金色浮動文字
+      showPickupText(this, loot.x, loot.y, `+${v} G`, '#ffd766');
+    } else if (loot.lootType === 'potion') {
+      const actual = this.player.heal(LOOT_CONST.potionHeal);
+      // 綠色浮動文字（實際回血量）
+      showPickupText(this, loot.x, loot.y, `+${actual} HP`, '#33ff66');
+    }
+    loot.pickup();
   }
 }

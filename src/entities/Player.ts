@@ -17,6 +17,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly classStats: ClassStats;
   stats: LevelState;
 
+  /** 金幣數量（TASK-002 掉寶拾取） */
+  gold: number = 0;
+
   private lastAttackAt = -Infinity;
   /** click-to-move 目標點；null = 無 */
   private moveTarget: Phaser.Math.Vector2 | null = null;
@@ -138,6 +141,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       playLevelUpEffect(this.scene, this.x, this.y, this.stats.level);
     }
     this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+  }
+
+  /** 增加金幣並 emit 更新（拾取用） */
+  addGold(value: number): void {
+    if (value > 0) {
+      this.gold += value;
+      this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+    }
+  }
+
+  /** 立即回血（藥水），回傳實際回復量；即使滿血仍消耗並拾取 */
+  heal(amount: number): number {
+    const prev = this.stats.hp;
+    this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + amount);
+    const actual = this.stats.hp - prev;
+    this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+    return actual;
   }
 
   /** 承受傷害（史萊姆反擊用）：扣 HP（最低 0）、emit、紅閃；歸零則復活 */

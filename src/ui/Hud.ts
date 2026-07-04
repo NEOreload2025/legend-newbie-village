@@ -16,6 +16,7 @@ export class Hud extends Phaser.Scene {
   private player!: Player;
   private infoText!: Phaser.GameObjects.Text;
   private bars!: Phaser.GameObjects.Graphics;
+  private goldText!: Phaser.GameObjects.Text;
 
   constructor() {
     super(Hud.KEY);
@@ -49,6 +50,15 @@ export class Hud extends Phaser.Scene {
 
     this.bars = this.add.graphics();
 
+    // 金幣顯示（金色），位於 XP 條下方（TASK-002）
+    this.goldText = this.add.text(12, 90, '', {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color: '#ffd766',
+      stroke: '#000000',
+      strokeThickness: 3,
+    });
+
     // 底部中央操作提示
     this.add
       .text(
@@ -76,6 +86,7 @@ export class Hud extends Phaser.Scene {
     const s = this.player.stats;
     const need = xpNeeded(s.level);
     this.infoText.setText(`Lv.${s.level}  HP ${s.hp}/${s.maxHp}  XP ${s.xp}/${need}`);
+    this.goldText.setText(`Gold: ${this.player.gold}`);
 
     const barX = 12;
     const hpY = 58;

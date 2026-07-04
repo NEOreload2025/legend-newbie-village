@@ -19,6 +19,7 @@ export class BootScene extends Phaser.Scene {
     this.makeHouse();
     this.makeTree();
     this.makeFx();
+    this.makeLoot();
     this.scene.start('ClassSelect');
   }
 
@@ -306,6 +307,44 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0x2a8822, 0.9);
     g.strokeEllipse(11, 9, 20, 14);
     g.generateTexture('slime', 22, 16);
+    g.destroy();
+  }
+
+  /** 掉落物貼圖（TASK-002）：金幣 10×10、紅藥水瓶 10×14 */
+  private makeLoot(): void {
+    // loot-gold：金色圓餅 + 高光 + 深色邊
+    let g = this.g();
+    g.fillStyle(0x3a2a10, 1);
+    g.fillCircle(5, 5, 5);
+    g.fillStyle(0xffd766, 1);
+    g.fillCircle(5, 5, 4.2);
+    // 高光
+    g.fillStyle(0xfff2aa, 0.9);
+    g.fillCircle(3.5, 3.2, 1.6);
+    // 邊緣陰影
+    g.lineStyle(1, 0x8a6a20, 1);
+    g.strokeCircle(5, 5, 4.2);
+    g.generateTexture('loot-gold', 10, 10);
+    g.destroy();
+
+    // loot-potion：紅色瓶身 + 瓶頸 + 高光（約 10×14）
+    g = this.g();
+    // 瓶身
+    g.fillStyle(0xaa2222, 1);
+    g.fillRect(2, 6, 6, 7);
+    // 瓶頸
+    g.fillStyle(0x882222, 1);
+    g.fillRect(3.5, 3, 3, 4);
+    // 瓶口
+    g.fillStyle(0x661a1a, 1);
+    g.fillRect(3, 2, 4, 2);
+    // 紅高光
+    g.fillStyle(0xee5555, 0.7);
+    g.fillRect(2.5, 7, 1.5, 4);
+    // 玻璃邊
+    g.lineStyle(1, 0x551111, 1);
+    g.strokeRect(2, 6, 6, 7);
+    g.generateTexture('loot-potion', 10, 14);
     g.destroy();
   }
 }

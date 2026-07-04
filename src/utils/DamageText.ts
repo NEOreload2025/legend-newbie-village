@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
-export type DamageStyle = 'normal' | 'mage';
+import type { DamageStyle } from '../entities/Attackable';
+export type { DamageStyle };
 
 /** 傷害跳字（§5）：目標頭上跳出、上飄後淡出；法師有專屬樣式 */
 export function showDamageText(

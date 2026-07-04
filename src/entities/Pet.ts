@@ -2,14 +2,14 @@ import Phaser from 'phaser';
 import { PET_CONST } from '../data/ClassStats';
 import { findNearestTarget } from '../systems/CombatSystem';
 import { playAttackBounce, playAttackEffect } from '../utils/VisualEffects';
-import type { TrainingDummy } from './TrainingDummy';
+import type { Attackable } from './Attackable';
 
-/** 道士跟寵（§7）：跟隨主人左後方、每 2 秒自動攻擊 60px 內假人 */
+/** 道士跟寵（§7）：跟隨主人左後方、每 2 秒自動攻擊 60px 內目標（假人 + 史萊姆） */
 export class Pet extends Phaser.GameObjects.Sprite {
   readonly atk: number = PET_CONST.atk;
 
   private owner: Phaser.GameObjects.Sprite;
-  private dummies: readonly TrainingDummy[];
+  private targets: readonly Attackable[];
   private floatPhase = Math.random() * Math.PI * 2;
   /** 未加漂浮位移前的平滑 y（漂浮僅作用於顯示） */
   private smoothY: number;
@@ -17,7 +17,7 @@ export class Pet extends Phaser.GameObjects.Sprite {
   constructor(
     scene: Phaser.Scene,
     owner: Phaser.GameObjects.Sprite,
-    dummies: readonly TrainingDummy[],
+    targets: readonly Attackable[],
   ) {
     super(
       scene,
@@ -26,7 +26,7 @@ export class Pet extends Phaser.GameObjects.Sprite {
       'pet',
     );
     this.owner = owner;
-    this.dummies = dummies;
+    this.targets = targets;
     this.smoothY = this.y;
     this.setOrigin(0.5, 1);
     scene.add.existing(this);
@@ -53,7 +53,7 @@ export class Pet extends Phaser.GameObjects.Sprite {
   private tryAttack(): void {
     const target = findNearestTarget(
       this,
-      this.dummies,
+      this.targets,
       PET_CONST.attackRange,
       (d) => d.alive,
     );

@@ -15,6 +15,7 @@ export class BootScene extends Phaser.Scene {
     this.makePlayers();
     this.makePet();
     this.makeDummy();
+    this.makeSlime();
     this.makeHouse();
     this.makeTree();
     this.makeFx();
@@ -282,6 +283,29 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(2, 0xffffaa, 0.8);
     g.strokeCircle(32, 32, 22);
     g.generateTexture('fx-ring', 64, 64);
+    g.destroy();
+  }
+
+  /** 史萊姆（§3）：22×16 綠色果凍半圓 + 高光 + 黑眼 */
+  private makeSlime(): void {
+    const g = this.g();
+    // 主體
+    g.fillStyle(0x55cc44, 1);
+    g.fillEllipse(11, 9, 20, 14);
+    // 底部陰影
+    g.fillStyle(0x3daa33, 0.7);
+    g.fillEllipse(11, 11, 18, 8);
+    // 頂部高光
+    g.fillStyle(0x99ee88, 0.65);
+    g.fillEllipse(9, 6, 9, 4);
+    // 眼睛
+    g.fillStyle(0x112200, 1);
+    g.fillCircle(7, 8, 1.8);
+    g.fillCircle(15, 8, 1.8);
+    // 輪廓
+    g.lineStyle(1, 0x2a8822, 0.9);
+    g.strokeEllipse(11, 9, 20, 14);
+    g.generateTexture('slime', 22, 16);
     g.destroy();
   }
 }

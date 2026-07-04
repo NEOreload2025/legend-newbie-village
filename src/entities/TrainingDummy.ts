@@ -1,14 +1,13 @@
 import Phaser from 'phaser';
 import { DUMMY_CONST } from '../data/ClassStats';
 import { showDamageText } from '../utils/DamageText';
-import type { DamageStyle } from '../utils/DamageText';
+import type { DamageStyle, KillSource } from './Attackable';
 import { playDeathShards } from '../utils/VisualEffects';
 import { computeDamage } from '../systems/CombatSystem';
-
-export type KillSource = 'player' | 'pet';
+import type { Attackable } from './Attackable';
 
 /** 訓練假人（§6）：HP 30、DEF 2、死亡 3 秒後原地重生 */
-export class TrainingDummy extends Phaser.GameObjects.Sprite {
+export class TrainingDummy extends Phaser.GameObjects.Sprite implements Attackable {
   hp: number = DUMMY_CONST.hp;
   readonly def: number = DUMMY_CONST.def;
   alive = true;

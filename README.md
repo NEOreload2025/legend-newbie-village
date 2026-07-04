@@ -48,3 +48,15 @@ src/
 - **寵物攻擊節奏**：以固定 2000ms 計時器觸發，範圍內無存活假人則該次跳過。
 - **深度排序**：地面 tile 深度 = 其 y；所有物件深度 = 1000 + y，確保 tile 永遠在物件之下，
   物件間依 y 正確前後遮擋。
+
+## TASK-001 史萊姆實作的規格未明處決策
+
+- 引入 `src/entities/Attackable.ts` 定義 `Attackable` 介面與共用 `KillSource` / `DamageStyle` 型別，供 `TrainingDummy`、`Slime` 實作；`Player`/`Pet` 目標清單型別改為 `readonly Attackable[]`（避免重複定義並符合 §7 建議）。
+- `Player.gainKillXp` 改為接受 `xpAmount` 參數，由 VillageScene 建置時的 callback 分別傳 `GAME_CONST.xpPerKill`（假人）與 `SLIME_CONST.xpReward`（史萊姆）。
+- `Player.takeDamage` 內部處理 HP 扣除、emit、100ms 紅 tint 閃爍，以及 HP 歸零時的出生點復活 + 「復活 Revived」浮動文字；復活時一併清除 moveTarget 與 velocity。
+- 史萊姆死亡視覺重用 `playDeathShards`（加綠 tint）+ 自訂 squash+alpha fade tween；待機 squash&stretch tween 於死亡時 pause、重生時 resume。
+- `VillageScene` 內 `buildPlayer` 先於 `buildDummies`/`buildSlimes`，以便將 player 參考傳給 Slime（追擊與反擊需要）；pet 建立時組合 targets 陣列。
+- 史萊姆出生/重生座標使用與假人相同的 `tileToWorld(...) + TILE_H/2 + 6`；重生強制 setPosition 回 birth 座標。
+- 史萊姆貼圖生成細節（橢圓主體 + 高光 + 黑眼）依「約 22×16 綠色果凍」描述程式實作，無外部素材。
+- 史萊姆僅與 obstacles collider（不與玩家/其他史萊姆），死亡期間 alive=false 不可被鎖定；脫離 aggro 範圍僅停止不回點。
+- 所有新增數值嚴格放 `src/data/MonsterStats.ts`；未修改 `tasks/**`、未改 `src/systems/*`、無 `any`、無新 runtime dep。

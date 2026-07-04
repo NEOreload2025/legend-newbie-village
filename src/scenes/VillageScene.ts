@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { GameState } from '../data/GameState';
+import { SLIME_CONST } from '../data/MonsterStats';
+import { GAME_CONST } from '../data/ClassStats';
 import { Player } from '../entities/Player';
 import { Pet } from '../entities/Pet';
 import { TrainingDummy } from '../entities/TrainingDummy';
+import { Slime } from '../entities/Slime';
+import type { Attackable } from '../entities/Attackable';
 import { Hud } from '../ui/Hud';
 import {
   DUMMY_TILES,
@@ -10,6 +14,7 @@ import {
   MAP_OBJECTS,
   MAP_ROWS,
   PLAYER_SPAWN_TILE,
+  SLIME_TILES,
   TILE_H,
   WORLD_HEIGHT,
   WORLD_WIDTH,
@@ -27,6 +32,7 @@ export class VillageScene extends Phaser.Scene {
   private player!: Player;
   private pet: Pet | null = null;
   private dummies: TrainingDummy[] = [];
+  private slimes: Slime[] = [];
 
   constructor() {
     super(VillageScene.KEY);
@@ -34,18 +40,23 @@ export class VillageScene extends Phaser.Scene {
 
   create(): void {
     this.dummies = [];
+    this.slimes = [];
     this.pet = null;
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     this.buildGround();
     const obstacles = this.buildObstacles();
-    this.buildDummies();
     this.buildPlayer();
+    this.buildDummies();
+    this.buildSlimes();
+
     this.physics.add.collider(this.player, obstacles);
+    this.slimes.forEach((slime) => this.physics.add.collider(slime, obstacles));
 
     if (this.player.classId === 'taoist') {
-      this.pet = new Pet(this, this.player, this.dummies);
+      const targets: readonly Attackable[] = [...this.dummies, ...this.slimes];
+      this.pet = new Pet(this, this.player, targets);
     }
 
     this.buildSignpost();
@@ -58,8 +69,12 @@ export class VillageScene extends Phaser.Scene {
   }
 
   override update(time: number): void {
-    this.player.update(time, this.dummies);
+    const targets: readonly Attackable[] = [...this.dummies, ...this.slimes];
+    this.player.update(time, targets);
     this.pet?.update(time);
+    for (const slime of this.slimes) {
+      slime.update(time);
+    }
   }
 
   /** 鋪設等角地面：草地 / 泥土十字路 / 訓練區 */
@@ -111,10 +126,24 @@ export class VillageScene extends Phaser.Scene {
       const groundY = y + TILE_H / 2;
       const dummy = new TrainingDummy(this, x, groundY + 6, (source) => {
         // 寵物擊殺不給玩家經驗值（§7）
-        if (source === 'player') this.player.gainKillXp();
+        if (source === 'player') this.player.gainKillXp(GAME_CONST.xpPerKill);
       });
       dummy.setDepth(OBJECT_DEPTH_BASE + dummy.y);
       this.dummies.push(dummy);
+    }
+  }
+
+  /** 史萊姆放置於指定 tiles（§2、§8） */
+  private buildSlimes(): void {
+    for (const tile of SLIME_TILES) {
+      const { x, y } = tileToWorld(tile.col, tile.row);
+      const groundY = y + TILE_H / 2;
+      const slime = new Slime(this, x, groundY + 6, this.player, (source) => {
+        // 玩家親自擊殺給 40 XP
+        if (source === 'player') this.player.gainKillXp(SLIME_CONST.xpReward);
+      });
+      slime.setDepth(OBJECT_DEPTH_BASE + slime.y);
+      this.slimes.push(slime);
     }
   }
 

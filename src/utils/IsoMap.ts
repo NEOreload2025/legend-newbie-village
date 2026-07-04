@@ -70,3 +70,10 @@ export const DUMMY_TILES: readonly { col: number; row: number }[] = [
 
 /** 玩家出生點：村莊中心附近（十字路口旁） */
 export const PLAYER_SPAWN_TILE = { col: 8, row: 6 } as const;
+
+/** 史萊姆出生 tiles（§2）：死亡後於原 tile 重生 */
+export const SLIME_TILES: readonly { col: number; row: number }[] = [
+  { col: 3, row: 9 },
+  { col: 6, row: 10 },
+  { col: 3, row: 13 },
+];

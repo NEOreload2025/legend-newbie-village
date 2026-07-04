@@ -5,7 +5,8 @@ import { gainXp } from '../systems/LevelSystem';
 import type { LevelState } from '../systems/LevelSystem';
 import { findNearestTarget } from '../systems/CombatSystem';
 import { playAttackBounce, playAttackEffect, playLevelUpEffect } from '../utils/VisualEffects';
-import type { TrainingDummy } from './TrainingDummy';
+import { tileToWorld, PLAYER_SPAWN_TILE, TILE_H } from '../utils/IsoMap';
+import type { Attackable } from './Attackable';
 
 /** 玩家事件：HUD 訂閱以即時更新 */
 export const PLAYER_EVENT_STATS_CHANGED = 'stats-changed';
@@ -74,9 +75,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.moveTarget = new Phaser.Math.Vector2(x, y);
   }
 
-  override update(time: number, dummies: readonly TrainingDummy[]): void {
+  override update(time: number, targets: readonly Attackable[]): void {
     this.updateMovement();
-    this.updateAttack(time, dummies);
+    this.updateAttack(time, targets);
     this.setDepth(1000 + this.y);
   }
 
@@ -114,13 +115,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     body.setVelocity(0, 0);
   }
 
-  private updateAttack(time: number, dummies: readonly TrainingDummy[]): void {
+  private updateAttack(time: number, targets: readonly Attackable[]): void {
     if (!this.attackQueued) return;
     this.attackQueued = false;
     if (time - this.lastAttackAt < this.classStats.attackCooldownMs) return;
 
-    // 鎖定半徑 56px 內最近的存活假人
-    const target = findNearestTarget(this, dummies, GAME_CONST.attackRange, (d) => d.alive);
+    // 鎖定半徑 56px 內最近的存活目標（假人 + 史萊姆）
+    const target = findNearestTarget(this, targets, GAME_CONST.attackRange, (d) => d.alive);
     if (!target) return;
 
     this.lastAttackAt = time;
@@ -129,13 +130,67 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     target.receiveAttack(this.stats.atk, 'player', this.classId === 'mage' ? 'mage' : 'normal');
   }
 
-  /** 親自擊殺假人 → 發放經驗值，可連升（§8） */
-  gainKillXp(): void {
-    const result = gainXp(this.stats, GAME_CONST.xpPerKill);
+  /** 親自擊殺 → 發放經驗值（假人 25 / 史萊姆 40），可連升（§8、slime §5） */
+  gainKillXp(xpAmount: number): void {
+    const result = gainXp(this.stats, xpAmount);
     this.stats = result.state;
     if (result.levelsGained > 0) {
       playLevelUpEffect(this.scene, this.x, this.y, this.stats.level);
     }
     this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+  }
+
+  /** 承受傷害（史萊姆反擊用）：扣 HP（最低 0）、emit、紅閃；歸零則復活 */
+  takeDamage(amount: number): void {
+    const prevHp = this.stats.hp;
+    this.stats.hp = Math.max(0, this.stats.hp - amount);
+    this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+
+    // 受擊紅 tint 閃 100ms（史萊姆攻擊）
+    this.setTintFill(0xff4444);
+    this.scene.time.delayedCall(100, () => {
+      if (this.stats.hp > 0) this.clearTint();
+    });
+
+    if (this.stats.hp <= 0 && prevHp > 0) {
+      this.handleDeathAndRevive();
+    }
+  }
+
+  private handleDeathAndRevive(): void {
+    // 傳送回出生點（tile 中心 +6，與建置一致）
+    const { x, y } = tileToWorld(PLAYER_SPAWN_TILE.col, PLAYER_SPAWN_TILE.row);
+    const groundY = y + TILE_H / 2;
+    const spawnX = x;
+    const spawnY = groundY + 6;
+
+    this.setPosition(spawnX, spawnY);
+    this.moveTarget = null;
+    (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+
+    this.stats.hp = this.stats.maxHp;
+    this.clearTint();
+    this.emit(PLAYER_EVENT_STATS_CHANGED, this.stats);
+
+    // 角色位置顯示「復活 Revived」浮動文字
+    const text = this.scene.add
+      .text(this.x, this.y - 40, '復活 Revived', {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color: '#aaffaa',
+        stroke: '#003300',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(5000);
+    this.scene.tweens.add({
+      targets: text,
+      y: this.y - 70,
+      alpha: 0,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy(),
+    });
   }
 }

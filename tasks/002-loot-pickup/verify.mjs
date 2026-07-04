@@ -48,6 +48,15 @@ await page.waitForTimeout(1500);
 await page.keyboard.press('1'); // 戰士（def 12 高，被史萊姆打只掉 1，戰鬥中不易死）
 await page.waitForTimeout(800);
 
+// 防呆：stub Math.random 會讓 Phaser UUID() 重複 → Text 貼圖 key 撞名 → addCanvas 回傳 null 而崩潰。
+// 幫 addCanvas 的 key 加流水號（純測試 harness 層 patch，不影響遊戲邏輯）。
+await page.evaluate(() => {
+  const tm = window.__game.textures;
+  const orig = tm.addCanvas.bind(tm);
+  let uid = 0;
+  tm.addCanvas = (key, canvas, skipCache) => orig(`${key}-vfy${++uid}`, canvas, skipCache);
+});
+
 let s = await state();
 check('VillageScene 有 loots 陣列（初始空）', Array.isArray((await page.evaluate(() => window.__game.scene.getScene('Village').loots ?? null))) , JSON.stringify(s.loots));
 check('player.gold 欄位存在且為 0', s.player.gold === 0, `gold=${s.player.gold}`);
@@ -77,7 +86,7 @@ await page.evaluate(() => { Math.random = window.__origRandom; });
 s = await state();
 const killedSlime = s.slimes.filter((x) => !x.alive).length >= 1;
 check('史萊姆已被擊殺', killedSlime, JSON.stringify(s.slimes));
-check('§2 死亡有掉落物出現', s.loots.length >= 1, JSON.stringify(s.loots));
+// 註：不單獨檢查地面掉落物——玩家站在死亡點旁可能瞬間自動拾取，以下用金幣入帳驗證掉落
 
 // 走到每個掉落物上拾取（散落半徑 16 可能超出 pickupRange 20）
 for (const loot of s.loots) {
@@ -105,29 +114,34 @@ const hudHasGold = await page.evaluate(() => {
 });
 check('§5 HUD 顯示 Gold', hudHasGold);
 
-// 缺血時藥水確實回血：讓另一隻史萊姆打幾下再殺它撿藥水
-await clickWorld(384, 342);
-await waitFor(async () => {
-  const st = await state();
-  return Math.hypot(st.player.x - 384, st.player.y - 342) < 70;
-}, 9000, '接近第二隻史萊姆');
-await waitFor(async () => (await state()).player.hp < maxHp, 8000, '被史萊姆打到缺血');
-await page.evaluate(() => { window.__origRandom = Math.random; Math.random = () => 0; });
+// 缺血時藥水確實回血：擊殺瞬間掉落物會被貼身自動拾取，
+// 所以「擊殺前」先設 hp = max-30 且 xp = 0（避免升級回滿遮蔽藥水 +20）
+const goldBefore2 = (await state()).player.gold;
+await page.evaluate(() => {
+  const v = window.__game.scene.getScene('Village');
+  v.player.stats.hp = v.player.stats.maxHp - 30;
+  v.player.stats.xp = 0; // 下一殺 +40 < 升級門檻，不會觸發回滿
+  v.player.emit('stats-changed', v.player.stats);
+});
 const beforePotion = (await state()).player;
-for (let i = 0; i < 3; i++) {
+await page.evaluate(() => { window.__origRandom = Math.random; Math.random = () => 0; });
+for (let i = 0; i < 4; i++) {
   await page.keyboard.press('Space');
   await page.waitForTimeout(1100);
+  if ((await state()).player.gold > goldBefore2) break;
 }
 await page.evaluate(() => { Math.random = window.__origRandom; });
+// 撿走可能散落在拾取範圍外的殘餘掉落物
 s = await state();
 for (const loot of s.loots) {
   await clickWorld(loot.x, loot.y);
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1300);
 }
-await waitFor(async () => (await state()).player.gold === beforePotion.gold + 3, 6000, '第二枚金幣入帳');
+await waitFor(async () => (await state()).player.gold >= goldBefore2 + 3, 6000, '第二枚金幣入帳');
 s = await state();
-// 戰士被史萊姆打每下僅 1 HP，缺血 <20 → 藥水應回到滿血
-check('§4 缺血時藥水回血至滿（缺血量 < potionHeal）', s.player.hp === s.player.maxHp, `hp ${beforePotion.hp} → ${s.player.hp}/${s.player.maxHp}`);
+const healed = s.player.hp - beforePotion.hp;
+// 預期 +20（容忍測試期間被史萊姆咬 1~5 下：每下 1）
+check('§4 缺血時藥水回血 ≈ potionHeal(20)', healed >= 15 && healed <= 21 && s.player.hp <= s.player.maxHp, `hp ${beforePotion.hp} → ${s.player.hp}/${s.player.maxHp} (+${healed})`);
 
 // 回歸：假人擊殺不掉落
 await clickWorld(640, 496);

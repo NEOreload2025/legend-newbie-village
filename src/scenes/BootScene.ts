@@ -16,6 +16,9 @@ export class BootScene extends Phaser.Scene {
     this.makePet();
     this.makeDummy();
     this.makeSlime();
+    this.makeChicken();
+    this.makeDeer();
+    this.makeSkeleton();
     this.makeHouse();
     this.makeTree();
     this.makeFx();
@@ -307,6 +310,119 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0x2a8822, 0.9);
     g.strokeEllipse(11, 9, 20, 14);
     g.generateTexture('slime', 22, 16);
+    g.destroy();
+  }
+
+  /** 雞（TASK-005）：約 16×16 白色圓身 + 紅雞冠 + 黃喙 + 兩腳 */
+  private makeChicken(): void {
+    const g = this.g();
+    // 身體（白色橢圓）
+    g.fillStyle(0xffffff, 1);
+    g.fillEllipse(8, 9, 12, 9);
+    // 底部陰影
+    g.fillStyle(0xdddddd, 0.6);
+    g.fillEllipse(8, 10, 10, 6);
+    // 左腳
+    g.fillStyle(0xffcc33, 1);
+    g.fillRect(5, 13, 2, 3);
+    // 右腳
+    g.fillRect(9, 13, 2, 3);
+    // 紅雞冠（三小塊）
+    g.fillStyle(0xcc2222, 1);
+    g.fillRect(6, 2, 2, 2);
+    g.fillRect(8, 1, 2, 2);
+    g.fillRect(10, 2, 2, 2);
+    // 黃喙（三角）
+    g.fillStyle(0xffcc33, 1);
+    g.beginPath();
+    g.moveTo(13, 8);
+    g.lineTo(16, 7);
+    g.lineTo(13, 10);
+    g.closePath();
+    g.fillPath();
+    // 眼睛
+    g.fillStyle(0x222222, 1);
+    g.fillCircle(5, 8, 1);
+    g.fillCircle(10, 8, 1);
+    g.generateTexture('chicken', 16, 16);
+    g.destroy();
+  }
+
+  /** 鹿（TASK-005）：約 26×28 棕身 + 四腳 + 頭 + 鹿角 + 白尾 */
+  private makeDeer(): void {
+    const g = this.g();
+    // 身體（棕）
+    g.fillStyle(0x8b5a2b, 1);
+    g.fillEllipse(14, 15, 18, 11);
+    // 身體陰影
+    g.fillStyle(0x6b4422, 0.5);
+    g.fillEllipse(14, 17, 16, 7);
+    // 四腿
+    g.fillStyle(0x6b4422, 1);
+    g.fillRect(8, 19, 2, 8);
+    g.fillRect(12, 19, 2, 8);
+    g.fillRect(17, 19, 2, 8);
+    g.fillRect(21, 19, 2, 8);
+    // 頭
+    g.fillStyle(0x8b5a2b, 1);
+    g.fillEllipse(22, 10, 8, 7);
+    // 耳朵
+    g.fillStyle(0x6b4422, 1);
+    g.fillEllipse(19, 7, 3, 4);
+    g.fillEllipse(25, 7, 3, 4);
+    // 鹿角（簡單兩枝 + 小分叉）
+    g.lineStyle(2, 0x5a3a1a, 1);
+    g.lineBetween(20, 6, 18, 1);
+    g.lineBetween(18, 1, 16, 0);
+    g.lineBetween(24, 6, 26, 1);
+    g.lineBetween(26, 1, 28, 0);
+    // 白尾
+    g.fillStyle(0xeeeeee, 1);
+    g.fillEllipse(5, 13, 4, 3);
+    // 眼睛
+    g.fillStyle(0x222222, 1);
+    g.fillCircle(24, 10, 1);
+    g.generateTexture('deer', 26, 28);
+    g.destroy();
+  }
+
+  /** 骷髏（TASK-005）：約 22×34 灰白人形——顱骨 + 肋骨線條 + 四肢，深色眼窩 */
+  private makeSkeleton(): void {
+    const g = this.g();
+    // 頭顱（骨色）
+    g.fillStyle(0xe8dcc8, 1);
+    g.fillCircle(11, 7, 6);
+    // 頭陰影/輪廓
+    g.lineStyle(1, 0x9a8a70, 1);
+    g.strokeCircle(11, 7, 6);
+    // 深色眼窩
+    g.fillStyle(0x333333, 1);
+    g.fillCircle(8, 6, 1.5);
+    g.fillCircle(14, 6, 1.5);
+    // 鼻孔
+    g.fillRect(10, 9, 2, 1);
+    // 軀幹（肋骨）
+    g.fillStyle(0xe8dcc8, 1);
+    g.fillRect(8, 14, 6, 12);
+    // 肋骨線條
+    g.lineStyle(1, 0x8a7a60, 0.9);
+    g.lineBetween(8, 17, 14, 17);
+    g.lineBetween(8, 20, 14, 20);
+    g.lineBetween(8, 23, 14, 23);
+    // 左臂
+    g.fillStyle(0xd4c4a8, 1);
+    g.fillRect(4, 15, 4, 10);
+    // 右臂
+    g.fillRect(14, 15, 4, 10);
+    // 骨盆
+    g.fillStyle(0xe8dcc8, 1);
+    g.fillEllipse(11, 27, 8, 4);
+    // 左腿
+    g.fillStyle(0xd4c4a8, 1);
+    g.fillRect(7, 28, 3, 6);
+    // 右腿
+    g.fillRect(12, 28, 3, 6);
+    g.generateTexture('skeleton', 22, 34);
     g.destroy();
   }
 

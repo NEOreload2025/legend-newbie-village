@@ -93,3 +93,16 @@ src/
 - 繼續套用直接替換 `this.player.stats = { level, xp, ... }`（類似 gainXp 模式）與 `this.player.gold = `，再 emit 讓 HUD 即時顯示正確數值；套用完成後無條件將 continueRun 重置為 false。
 - 鍵盤 Continue 使用 'keydown-C'（與 SPACE/J/ONE 事件風格一致），相容 playwright 的 page.keyboard.press('c')。
 - 除新增 `src/systems/SaveSystem.ts` 外，未修改 `src/systems/` 任何既有檔案；VillageScene 內的存檔訂閱與 ClassSelect 的 UI/流程決策均符合「純函式 + 場景解耦」原則；未改 tasks/、零 any、所有數值仍來自既有 data/。
+
+## TASK-005 通用怪物系統與新怪包的規格未明處決策
+
+- MonsterDef 於 MonsterStats 內額外新增 `bodyW` / `bodyH` 欄位（供 Monster 設定 Arcade body），以避免數值散落於實體 ctor 內；此為滿足「所有數值常數集中 data/」的實作延伸，SPEC 介面列舉未涵蓋 physics 細節。
+- 為確保 retaliate/passive 模式正確重置，die/respawn 內明確重設 retaliating 與 flee 狀態旗標；重生後所有模式均回到純遊蕩。
+- passive flee 方向計算使用 targetPlayer 位置（即使寵物攻擊也近似），因 receiveAttack 未傳 attacker 座標且未修改 Attackable 介面；逃跑 1s 後自然回到遊蕩。
+- retaliate 脫戰距離 150 固定寫於 MONSTER_RETALIATE_DEAGGRO 常數（非 def 欄位），符合 SPEC「retaliate 的脫戰距離固定 150」。
+- spawnLoot 改為可傳 goldMin/Max/potionChance 參數（預設沿用 LOOT_CONST），使怪物掉寶完全由 def 驅動；舊 slime 行為等價。
+- VillageScene 內 monsters 陣列與 buildMonsters 命名/結構完全符合驗證需求；targets 組合、collider 迴圈、update 呼叫皆泛型化。
+- 貼圖生成（chicken/deer/skeleton）完全程式繪製於 BootScene，尺寸與 SPEC 描述吻合，無外部檔。
+- 刪除 Slime.ts 後，所有既有史萊姆行為（遊蕩/追擊/攻擊/紅閃/死亡/重生/掉寶/XP）透過 Monster + MONSTER_DEFS 完全保留，未退化。
+- 未修改 tasks/、src/systems/ 任何檔案；root 執行 tsc + build 零錯誤；未加 runtime dep、未啟動 dev server。
+

@@ -133,7 +133,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     target.receiveAttack(this.stats.atk, 'player', this.classId === 'mage' ? 'mage' : 'normal');
   }
 
-  /** 親自擊殺 → 發放經驗值（假人 25 / 史萊姆 40），可連升（§8、slime §5） */
+  /** 親自擊殺 → 發放經驗值（依目標 def），可連升（§8、TASK-005） */
   gainKillXp(xpAmount: number): void {
     const result = gainXp(this.stats, xpAmount);
     this.stats = result.state;

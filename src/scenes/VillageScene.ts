@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 import { GameState } from '../data/GameState';
-import { SLIME_CONST } from '../data/MonsterStats';
+import { MONSTER_DEFS } from '../data/MonsterStats';
 import { LOOT_CONST } from '../data/LootStats';
 import { GAME_CONST } from '../data/ClassStats';
 import { Player, PLAYER_EVENT_STATS_CHANGED } from '../entities/Player';
 import { Pet } from '../entities/Pet';
 import { TrainingDummy } from '../entities/TrainingDummy';
-import { Slime } from '../entities/Slime';
+import { Monster } from '../entities/Monster';
 import { LootDrop } from '../entities/LootDrop';
 import type { Attackable } from '../entities/Attackable';
 import { Hud } from '../ui/Hud';
@@ -17,8 +17,8 @@ import {
   MAP_COLS,
   MAP_OBJECTS,
   MAP_ROWS,
+  MONSTER_SPAWNS,
   PLAYER_SPAWN_TILE,
-  SLIME_TILES,
   TILE_H,
   WORLD_HEIGHT,
   WORLD_WIDTH,
@@ -36,7 +36,8 @@ export class VillageScene extends Phaser.Scene {
   private player!: Player;
   private pet: Pet | null = null;
   private dummies: TrainingDummy[] = [];
-  private slimes: Slime[] = [];
+  /** 場上所有怪物（slime/chicken/deer/skeleton），命名必須為 monsters（驗證腳本相依） */
+  private monsters: Monster[] = [];
   /** 場上所有掉落物，命名必須為 loots（驗證腳本相依） */
   private loots: LootDrop[] = [];
 
@@ -46,7 +47,7 @@ export class VillageScene extends Phaser.Scene {
 
   create(): void {
     this.dummies = [];
-    this.slimes = [];
+    this.monsters = [];
     this.loots = [];
     this.pet = null;
 
@@ -88,13 +89,13 @@ export class VillageScene extends Phaser.Scene {
     this.player.on(PLAYER_EVENT_STATS_CHANGED, saveHandler);
 
     this.buildDummies();
-    this.buildSlimes();
+    this.buildMonsters();
 
     this.physics.add.collider(this.player, obstacles);
-    this.slimes.forEach((slime) => this.physics.add.collider(slime, obstacles));
+    this.monsters.forEach((m) => this.physics.add.collider(m, obstacles));
 
     if (this.player.classId === 'taoist') {
-      const targets: readonly Attackable[] = [...this.dummies, ...this.slimes];
+      const targets: readonly Attackable[] = [...this.dummies, ...this.monsters];
       this.pet = new Pet(this, this.player, targets);
     }
 
@@ -111,11 +112,11 @@ export class VillageScene extends Phaser.Scene {
   }
 
   override update(time: number): void {
-    const targets: readonly Attackable[] = [...this.dummies, ...this.slimes];
+    const targets: readonly Attackable[] = [...this.dummies, ...this.monsters];
     this.player.update(time, targets);
     this.pet?.update(time);
-    for (const slime of this.slimes) {
-      slime.update(time);
+    for (const monster of this.monsters) {
+      monster.update(time);
     }
     this.updateLoots();
   }
@@ -176,19 +177,21 @@ export class VillageScene extends Phaser.Scene {
     }
   }
 
-  /** 史萊姆放置於指定 tiles（§2、§8） */
-  private buildSlimes(): void {
-    for (const tile of SLIME_TILES) {
-      const { x, y } = tileToWorld(tile.col, tile.row);
+  /** 怪物放置（TASK-005）：依 MONSTER_SPAWNS + MONSTER_DEFS 建立各型怪物。
+   * 擊殺回呼：玩家給 XP（依 def），掉寶按 def 的 gold 範圍與藥水機率。
+   */
+  private buildMonsters(): void {
+    for (const spawn of MONSTER_SPAWNS) {
+      const def = MONSTER_DEFS[spawn.id];
+      const { x, y } = tileToWorld(spawn.col, spawn.row);
       const groundY = y + TILE_H / 2;
-      const slime = new Slime(this, x, groundY + 6, this.player, (source) => {
-        // 玩家親自擊殺給 40 XP
-        if (source === 'player') this.player.gainKillXp(SLIME_CONST.xpReward);
-        // 史萊姆死亡掉寶（金幣必掉 + 機率藥水），不論玩家或寵物擊殺
-        this.spawnLoot(slime.x, slime.y);
+      const monster = new Monster(this, x, groundY + 6, def, this.player, (source) => {
+        if (source === 'player') this.player.gainKillXp(def.xpReward);
+        // 怪物死亡掉寶（不論玩家或寵物擊殺）
+        this.spawnLoot(monster.x, monster.y, def.goldMin, def.goldMax, def.potionDropChance);
       });
-      slime.setDepth(OBJECT_DEPTH_BASE + slime.y);
-      this.slimes.push(slime);
+      monster.setDepth(OBJECT_DEPTH_BASE + monster.y);
+      this.monsters.push(monster);
     }
   }
 
@@ -230,17 +233,21 @@ export class VillageScene extends Phaser.Scene {
     });
   }
 
-  /** 生成掉落物：金幣（必）+ 藥水（機率），位置以死亡點為中心散落 */
-  private spawnLoot(baseX: number, baseY: number): void {
-    // 金幣：goldMin..goldMax 整數均勻
-    const goldValue =
-      Math.floor(Math.random() * (LOOT_CONST.goldMax - LOOT_CONST.goldMin + 1)) +
-      LOOT_CONST.goldMin;
+  /** 生成掉落物：金幣（必，依參數範圍）+ 藥水（依機率），位置以死亡點為中心散落。
+   * 預設值與 LOOT_CONST 相容（舊史萊姆行為）。
+   */
+  private spawnLoot(
+    baseX: number,
+    baseY: number,
+    goldMin: number = LOOT_CONST.goldMin,
+    goldMax: number = LOOT_CONST.goldMax,
+    potionChance: number = LOOT_CONST.potionDropChance,
+  ): void {
+    const goldValue = Math.floor(Math.random() * (goldMax - goldMin + 1)) + goldMin;
     const gold = new LootDrop(this, baseX, baseY, 'gold', goldValue);
     this.loots.push(gold);
 
-    // 紅藥水
-    if (Math.random() < LOOT_CONST.potionDropChance) {
+    if (Math.random() < potionChance) {
       const potion = new LootDrop(this, baseX, baseY, 'potion');
       this.loots.push(potion);
     }

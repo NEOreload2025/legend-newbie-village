@@ -1,4 +1,5 @@
 /** 等角地圖工具（§10）：20×16 格、菱形 tile 64×32 */
+import type { MonsterId } from '../data/MonsterStats';
 
 export const MAP_COLS = 20;
 export const MAP_ROWS = 16;
@@ -71,12 +72,25 @@ export const DUMMY_TILES: readonly { col: number; row: number }[] = [
 /** 玩家出生點：村莊中心附近（十字路口旁） */
 export const PLAYER_SPAWN_TILE = { col: 8, row: 6 } as const;
 
-/** 史萊姆出生 tiles（§2）：死亡後於原 tile 重生 */
-export const SLIME_TILES: readonly { col: number; row: number }[] = [
-  { col: 3, row: 9 },
-  { col: 6, row: 10 },
-  { col: 3, row: 13 },
-  { col: 15, row: 2 },
-  { col: 17, row: 3 },
-  { col: 15, row: 5 },
+/** 怪物出生點（TASK-005）：以 MONSTER_DEFS 差異化，含 slime×6、chicken×3、deer×2、skeleton×2。
+ * 位置避開房屋/樹木碰撞區。
+ */
+export const MONSTER_SPAWNS: readonly { id: MonsterId; col: number; row: number }[] = [
+  // slime ×6（原 SLIME_TILES 沿用）
+  { id: 'slime', col: 3, row: 9 },
+  { id: 'slime', col: 6, row: 10 },
+  { id: 'slime', col: 3, row: 13 },
+  { id: 'slime', col: 15, row: 2 },
+  { id: 'slime', col: 17, row: 3 },
+  { id: 'slime', col: 15, row: 5 },
+  // chicken ×3（村莊附近）
+  { id: 'chicken', col: 7, row: 4 },
+  { id: 'chicken', col: 12, row: 5 },
+  { id: 'chicken', col: 6, row: 9 },
+  // deer ×2
+  { id: 'deer', col: 3, row: 5 },
+  { id: 'deer', col: 18, row: 9 },
+  // skeleton ×2（地圖東西兩側）
+  { id: 'skeleton', col: 1, row: 9 },
+  { id: 'skeleton', col: 19, row: 9 },
 ];

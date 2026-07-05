@@ -41,7 +41,7 @@ await page.waitForTimeout(800);
 let s = await state();
 check('§3 共 6 隻史萊姆', s.slimes.length === 6, `len=${s.slimes.length}`);
 const zone = [
-  { x: 928, y: 342 }, // (15,2) ground+6
+  { x: 928, y: 358 }, // (15,2) ground+6 = (15+2)*16+64 + 16 + 6
   { x: 960, y: 406 }, // (17,3)
   { x: 832, y: 406 }, // (15,5)
 ];

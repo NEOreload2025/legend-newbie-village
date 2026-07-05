@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CLASS_ORDER, CLASS_STATS } from '../data/ClassStats';
 import type { ClassId } from '../data/ClassStats';
 import { GameState } from '../data/GameState';
+import { loadGame, clearSave } from '../systems/SaveSystem';
 
 const PANEL_W = 210;
 const PANEL_H = 320;
@@ -40,6 +41,38 @@ export class ClassSelectScene extends Phaser.Scene {
       this.createPanel(id, i + 1, centers[i], 330);
     });
 
+    // 有存檔時顯示「繼續遊戲」區塊（含摘要），可點擊或按 C 繼續
+    const saved = loadGame();
+    if (saved) {
+      const contY = height - 95;
+      const contW = 420;
+      const bg = this.add
+        .rectangle(width / 2, contY, contW, 52, 0x2a2f40, 0.92)
+        .setStrokeStyle(2, 0xffd766);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => this.continueGame(saved.classId));
+
+      this.add
+        .text(width / 2, contY - 10, '繼續遊戲 Continue', {
+          fontFamily: 'serif',
+          fontSize: '18px',
+          fontStyle: 'bold',
+          color: '#ffd766',
+          stroke: '#000000',
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5);
+
+      const summary = `${CLASS_STATS[saved.classId].nameZh} Lv.${saved.level}  Gold ${saved.gold}`;
+      this.add
+        .text(width / 2, contY + 13, summary, {
+          fontFamily: 'monospace',
+          fontSize: '14px',
+          color: '#cccccc',
+        })
+        .setOrigin(0.5);
+    }
+
     this.add
       .text(width / 2, height - 40, '點擊職業面板，或按鍵盤 1 / 2 / 3 選擇', {
         fontFamily: 'monospace',
@@ -53,6 +86,10 @@ export class ClassSelectScene extends Phaser.Scene {
       keyboard.on('keydown-ONE', () => this.select('warrior'));
       keyboard.on('keydown-TWO', () => this.select('mage'));
       keyboard.on('keydown-THREE', () => this.select('taoist'));
+      keyboard.on('keydown-C', () => {
+        const s = loadGame();
+        if (s) this.continueGame(s.classId);
+      });
     }
   }
 
@@ -114,7 +151,15 @@ export class ClassSelectScene extends Phaser.Scene {
   }
 
   private select(id: ClassId): void {
+    GameState.continueRun = false;
+    clearSave();
     GameState.selectedClass = id;
+    this.scene.start('Village');
+  }
+
+  private continueGame(classId: ClassId): void {
+    GameState.continueRun = true;
+    GameState.selectedClass = classId;
     this.scene.start('Village');
   }
 }

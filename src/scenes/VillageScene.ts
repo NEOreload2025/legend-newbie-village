@@ -3,7 +3,7 @@ import { GameState } from '../data/GameState';
 import { SLIME_CONST } from '../data/MonsterStats';
 import { LOOT_CONST } from '../data/LootStats';
 import { GAME_CONST } from '../data/ClassStats';
-import { Player } from '../entities/Player';
+import { Player, PLAYER_EVENT_STATS_CHANGED } from '../entities/Player';
 import { Pet } from '../entities/Pet';
 import { TrainingDummy } from '../entities/TrainingDummy';
 import { Slime } from '../entities/Slime';
@@ -11,6 +11,7 @@ import { LootDrop } from '../entities/LootDrop';
 import type { Attackable } from '../entities/Attackable';
 import { Hud } from '../ui/Hud';
 import { showPickupText } from '../utils/DamageText';
+import { saveGame, loadGame } from '../systems/SaveSystem';
 import {
   DUMMY_TILES,
   MAP_COLS,
@@ -54,6 +55,38 @@ export class VillageScene extends Phaser.Scene {
     this.buildGround();
     const obstacles = this.buildObstacles();
     this.buildPlayer();
+
+    // 繼續遊戲：若旗標有效且有存檔，套用存檔數值（含 gold）並 emit 讓 HUD 刷新
+    const saveData = loadGame();
+    if (GameState.continueRun && saveData && saveData.classId === GameState.selectedClass) {
+      this.player.stats = {
+        level: saveData.level,
+        xp: saveData.xp,
+        maxHp: saveData.maxHp,
+        hp: saveData.hp,
+        atk: saveData.atk,
+        def: saveData.def,
+      };
+      this.player.gold = saveData.gold;
+      this.player.emit(PLAYER_EVENT_STATS_CHANGED, this.player.stats);
+    }
+    GameState.continueRun = false;
+
+    // 每次 stats-changed（升級、受傷、拾金、擊殺等）即自動存檔
+    const saveHandler = () => {
+      saveGame({
+        classId: this.player.classId,
+        level: this.player.stats.level,
+        xp: this.player.stats.xp,
+        maxHp: this.player.stats.maxHp,
+        hp: this.player.stats.hp,
+        atk: this.player.stats.atk,
+        def: this.player.stats.def,
+        gold: this.player.gold,
+      });
+    };
+    this.player.on(PLAYER_EVENT_STATS_CHANGED, saveHandler);
+
     this.buildDummies();
     this.buildSlimes();
 
@@ -71,7 +104,10 @@ export class VillageScene extends Phaser.Scene {
 
     // HUD：平行 overlay 場景，固定於螢幕
     this.scene.launch(Hud.KEY, { player: this.player });
-    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => this.scene.stop(Hud.KEY));
+    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scene.stop(Hud.KEY);
+      this.player.off(PLAYER_EVENT_STATS_CHANGED, saveHandler);
+    });
   }
 
   override update(time: number): void {

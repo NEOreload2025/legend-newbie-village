@@ -83,3 +83,13 @@ src/
 - squash idleTween 於遊走期間持續運作（僅視覺）；遊走不影響深度、碰撞、onKilled 回呼、掉寶等既有行為。
 - 追加 SLIME_TILES 後總數 6 隻，新 3 隻出生點使用既有 `tileToWorld + TILE_H/2 + 6` 公式，spawn 與 radius 檢查皆以 birth 座標為準。
 - 所有數值嚴格置 `src/data/MonsterStats.ts` 的 SLIME_WANDER；無 hardcode、無 any、零改 tasks/ 與 systems/。
+
+## TASK-004 存檔系統的規格未明處決策
+
+- Continue 提示區塊置於畫面下方（約 y = height-95），採用金色邊框 `#ffd766` 的半透明矩形 + 兩行文字（粗體「繼續遊戲 Continue」＋職業中文名 `Lv.X` + `Gold N` 摘要），風格與職業面板一致；無存檔時完全不渲染該區塊。
+- `GameState` 直接在 singleton class 新增公開 `continueRun: boolean = false`（與 selectedClass 同層級），作為 ClassSelect 設定與 Village 消費的跨場景旗標。
+- `loadGame` 除 try/catch 外，嚴格驗證 classId 為 'warrior'|'mage'|'taoist' 其一，以及七個數值欄位均為 number；缺漏或型別錯誤一律回 null。
+- 存檔 listener 於 Player 建立後立即訂閱（使用閉包 saveHandler），continue 套用時的 emit 會一併觸發 save（確保載入後 localStorage 與狀態一致）；新局則於首次觸發 stats-changed（拾取/擊殺等）才寫入。
+- 繼續套用直接替換 `this.player.stats = { level, xp, ... }`（類似 gainXp 模式）與 `this.player.gold = `，再 emit 讓 HUD 即時顯示正確數值；套用完成後無條件將 continueRun 重置為 false。
+- 鍵盤 Continue 使用 'keydown-C'（與 SPACE/J/ONE 事件風格一致），相容 playwright 的 page.keyboard.press('c')。
+- 除新增 `src/systems/SaveSystem.ts` 外，未修改 `src/systems/` 任何既有檔案；VillageScene 內的存檔訂閱與 ClassSelect 的 UI/流程決策均符合「純函式 + 場景解耦」原則；未改 tasks/、零 any、所有數值仍來自既有 data/。

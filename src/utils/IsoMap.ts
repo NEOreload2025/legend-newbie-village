@@ -1,7 +1,7 @@
-/** 等角地圖工具（§10）：20×16 格、菱形 tile 64×32 */
+/** 等角地圖工具（§10）：30×16 格（TASK-007 東側荒野擴展）、菱形 tile 64×32 */
 import type { MonsterId } from '../data/MonsterStats';
 
-export const MAP_COLS = 20;
+export const MAP_COLS = 30;
 export const MAP_ROWS = 16;
 export const TILE_W = 64;
 export const TILE_H = 32;
@@ -14,7 +14,7 @@ export const MAP_OFFSET_Y = 64; // 上方留空間給樹木/房屋高度
 export const WORLD_WIDTH = (MAP_COLS + MAP_ROWS) * (TILE_W / 2); // 1152
 export const WORLD_HEIGHT = (MAP_COLS + MAP_ROWS - 1) * (TILE_H / 2) + TILE_H + MAP_OFFSET_Y; // 656
 
-export type Terrain = 'grass' | 'dirt' | 'training';
+export type Terrain = 'grass' | 'dirt' | 'training' | 'wild';
 
 /** 座標轉換：x=(col−row)×32, y=(col+row)×16（再加世界偏移） */
 export function tileToWorld(col: number, row: number): { x: number; y: number } {
@@ -31,15 +31,19 @@ const ROAD_COLS = [9, 10] as const;
 /** 訓練區：右下角區塊 */
 export const TRAINING_AREA = { colMin: 14, rowMin: 10 } as const;
 
+/** 荒野狩獵場（TASK-007）：地圖東側新增 10 欄 */
+export const WILD_AREA = { colMin: 20 } as const;
+
 export function terrainAt(col: number, row: number): Terrain {
   if (col >= TRAINING_AREA.colMin && row >= TRAINING_AREA.rowMin) return 'training';
   if (ROAD_ROWS.includes(row as (typeof ROAD_ROWS)[number])) return 'dirt';
   if (ROAD_COLS.includes(col as (typeof ROAD_COLS)[number])) return 'dirt';
+  if (col >= WILD_AREA.colMin) return 'wild';
   return 'grass';
 }
 
 export interface MapObjectPlacement {
-  kind: 'house' | 'tree';
+  kind: 'house' | 'tree' | 'rock';
   col: number;
   row: number;
 }
@@ -58,6 +62,17 @@ export const MAP_OBJECTS: readonly MapObjectPlacement[] = [
   { kind: 'tree', col: 1, row: 14 },
   { kind: 'tree', col: 12, row: 12 },
   { kind: 'tree', col: 12, row: 15 },
+  // TASK-007 荒野狩獵場（col 20–29）新增岩石與樹木
+  { kind: 'rock', col: 21, row: 2 },
+  { kind: 'rock', col: 24, row: 1 },
+  { kind: 'rock', col: 27, row: 4 },
+  { kind: 'rock', col: 23, row: 7 },
+  { kind: 'rock', col: 26, row: 9 },
+  { kind: 'rock', col: 29, row: 5 },
+  { kind: 'tree', col: 20, row: 4 },
+  { kind: 'tree', col: 25, row: 2 },
+  { kind: 'tree', col: 28, row: 8 },
+  { kind: 'tree', col: 22, row: 9 },
 ];
 
 /** 訓練假人位置（訓練區內） */
@@ -93,4 +108,13 @@ export const MONSTER_SPAWNS: readonly { id: MonsterId; col: number; row: number 
   // skeleton ×2（地圖東西兩側）
   { id: 'skeleton', col: 1, row: 9 },
   { id: 'skeleton', col: 19, row: 9 },
+  // TASK-007 荒野狩獵場（col 20–29）新增出生點：沿用既有 MonsterId，不新增怪物種類
+  { id: 'skeleton', col: 23, row: 3 },
+  { id: 'skeleton', col: 26, row: 6 },
+  { id: 'skeleton', col: 29, row: 8 },
+  { id: 'deer', col: 21, row: 5 },
+  { id: 'deer', col: 24, row: 8 },
+  { id: 'deer', col: 27, row: 2 },
+  { id: 'slime', col: 22, row: 1 },
+  { id: 'slime', col: 28, row: 4 },
 ];

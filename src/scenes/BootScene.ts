@@ -21,6 +21,7 @@ export class BootScene extends Phaser.Scene {
     this.makeSkeleton();
     this.makeHouse();
     this.makeTree();
+    this.makeRock();
     this.makeFx();
     this.makeLoot();
     this.scene.start('ClassSelect');
@@ -36,6 +37,7 @@ export class BootScene extends Phaser.Scene {
       { key: 'tile-grass', base: 0x3f7a34, edge: 0x2c5424, speckle: 0x5a9c48 },
       { key: 'tile-dirt', base: 0x8a6a42, edge: 0x624a2c, speckle: 0xa5845a },
       { key: 'tile-training', base: 0xa08858, edge: 0x74603a, speckle: 0xc0a878 },
+      { key: 'tile-wild', base: 0x9c8a4e, edge: 0x6f6035, speckle: 0xbcae7a },
     ];
     for (const d of defs) {
       const g = this.g();
@@ -238,6 +240,46 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x4f9c44, 1);
     g.fillCircle(18, 14, 8);
     g.generateTexture('tree', 44, 60);
+    g.destroy();
+  }
+
+  /** 岩石（TASK-007 荒野障礙物）：不規則灰色岩塊 */
+  private makeRock(): void {
+    const g = this.g();
+    // 陰影
+    g.fillStyle(0x000000, 0.2);
+    g.fillEllipse(15, 21, 22, 6);
+    // 岩體主色（不規則多邊形）
+    g.fillStyle(0x76726c, 1);
+    g.fillPoints(
+      [
+        { x: 2, y: 18 },
+        { x: 4, y: 8 },
+        { x: 12, y: 2 },
+        { x: 22, y: 4 },
+        { x: 28, y: 12 },
+        { x: 26, y: 20 },
+        { x: 16, y: 22 },
+        { x: 6, y: 20 },
+      ],
+      true,
+    );
+    // 亮面
+    g.fillStyle(0x928d84, 1);
+    g.fillPoints(
+      [
+        { x: 12, y: 2 },
+        { x: 22, y: 4 },
+        { x: 20, y: 12 },
+        { x: 10, y: 10 },
+      ],
+      true,
+    );
+    // 裂縫紋理
+    g.lineStyle(1, 0x4c4842, 0.7);
+    g.lineBetween(10, 10, 14, 18);
+    g.lineBetween(18, 8, 16, 16);
+    g.generateTexture('rock', 30, 24);
     g.destroy();
   }
 

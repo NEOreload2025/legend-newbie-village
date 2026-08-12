@@ -143,6 +143,9 @@ export class VillageScene extends Phaser.Scene {
       if (obj.kind === 'house') {
         this.add.image(x, groundY + 14, 'house').setOrigin(0.5, 1).setDepth(OBJECT_DEPTH_BASE + groundY);
         this.addStaticBody(group, x, groundY, 76, 34);
+      } else if (obj.kind === 'rock') {
+        this.add.image(x, groundY + 6, 'rock').setOrigin(0.5, 1).setDepth(OBJECT_DEPTH_BASE + groundY);
+        this.addStaticBody(group, x, groundY, 24, 16);
       } else {
         this.add.image(x, groundY + 6, 'tree').setOrigin(0.5, 1).setDepth(OBJECT_DEPTH_BASE + groundY);
         this.addStaticBody(group, x, groundY, 20, 14);

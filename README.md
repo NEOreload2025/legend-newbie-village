@@ -124,3 +124,11 @@ src/
 
 - Monster 攻擊玩家的 doAttack、玩家/寵物鎖定攻擊全部走 resolveAttack；僅編輯 SPEC 允許的 systems 三檔 + data/entities/scenes/utils 必要配合；root npx tsc + npm run build 零錯誤，無 any、無新依賴。
 
+## TASK-007 地圖擴展（東側荒野狩獵場）的規格未明處決策
+
+- `terrainAt` 優先序刻意訂為 training > dirt(road) > wild > grass：讓既有十字主幹道自然延伸進荒野區（row 7/8 全地圖皆為 dirt），且訓練區右下角向東延伸的格子仍維持 training 貼圖，不因新增 wild 判斷而變色，避免既有驗收（TASK-005 訓練區行為）退化。
+- `tile-wild`／`rock` 貼圖沿用 `makeTiles`／`makeHouse`/`makeTree` 既有的 Graphics 程式繪製手法，未新增素材檔；`rock` 尺寸 30×24、碰撞 zone 24×16（略小於視覺，比照 tree 的做法）。
+- `MapObjectPlacement.kind` 新增 `'rock'` 後，`VillageScene.buildObstacles()` 改用三分支（house/rock/tree），rock 分支視覺 offset（`groundY + 6`）沿用 tree 的做法，因兩者尺寸量級相近。
+- `WORLD_WIDTH`/`WORLD_HEIGHT`/`MAP_OFFSET_X` 完全未修改，僅調整 `MAP_COLS`（20→30），世界尺寸與相機邊界皆由既有公式自動反映擴大後的地圖，未觸碰 `VillageScene.ts` 的 `setBounds` 兩行。
+- 新增 8 個怪物出生點嚴格沿用既有 `MonsterId`（skeleton/deer/slime），未新增怪物種類、未動 `MonsterDef`／怪物行為；座標與 SPEC 逐一對應。
+

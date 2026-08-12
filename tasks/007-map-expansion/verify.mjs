@@ -66,6 +66,18 @@ const walkTo = async (wx, wy, tol, label) => {
   }, 20000, label);
 };
 
+// 不斷言成敗的移動（供分段長途移動使用；沿途卡到障礙物也不視為失敗，只看最終是否夠接近目標）
+const moveTowardSilent = async (wx, wy, tol, timeoutMs) => {
+  await clickWorld(wx, wy);
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const st = await state();
+    if (st && Math.hypot(st.player.x - wx, st.player.y - wy) < tol) return true;
+    await page.waitForTimeout(250);
+  }
+  return false;
+};
+
 await page.goto(`http://localhost:${PORT}/`);
 await page.waitForFunction(() => !!window.__game, null, { timeout: 15000 });
 await page.waitForTimeout(800);
@@ -136,8 +148,22 @@ for (const spawn of expectedSpawns) {
 }
 
 // 可達性：玩家可從村莊走到荒野深處（(29,8) 骷髏出生點附近）而不脫離世界/卡死
+// 目標點常遠超出單次點擊可視範圍（畫布 800×600、zoom 1.1），分段沿途走以確保每次點擊落在畫布內
 const deepWild = tileToWorld(29, 8);
-await walkTo(deepWild.x, deepWild.y, 60, '走到荒野深處(29,8)附近');
+{
+  const HOP = 280; // 略小於單邊可視世界距離（~800/2/1.1≈364），保留餘裕
+  for (let i = 0; i < 25; i++) {
+    const cur = (await state()).player;
+    const dx = deepWild.x - cur.x;
+    const dy = deepWild.y - cur.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 60) break;
+    const step = Math.min(HOP, dist);
+    const wx = cur.x + (dx / dist) * step;
+    const wy = cur.y + (dy / dist) * step;
+    await moveTowardSilent(wx, wy, 40, 8000);
+  }
+}
 s = await state();
 check(
   '§6 荒野區可達（玩家抵達(29,8)附近）',
